@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { parseMasterExcel } from './utils/excelParser';
 import { 
-  LayoutDashboard, ShoppingBag, Package, Users, Settings, 
-  Upload, TrendingUp, DollarSign, Activity, AlertTriangle,
+  LayoutDashboard, ShoppingBag, Package, Settings, Upload,
   ArrowUpRight, ArrowDownRight, Search, Truck
 } from 'lucide-react';
 import { 
@@ -13,7 +12,7 @@ import {
 const COLORS = ['#a855f7', '#06b6d4', '#f97316', '#10b981'];
 
 const MetricCard = ({ title, value, type, suffix = '' }) => {
-  const isNegative = type === 'critical' && value > 10;
+  const isNegative = type === 'critical' && value > 0;
   return (
     <div className="glass-card">
       <div className="card-title">{title}</div>
@@ -24,7 +23,7 @@ const MetricCard = ({ title, value, type, suffix = '' }) => {
       </div>
       <div className={`card-trend ${isNegative ? 'trend-down' : 'trend-up'}`}>
         {isNegative ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
-        <span>{isNegative ? 'Atención' : '+12.4%'}</span>
+        <span>{isNegative ? 'Atención' : 'Corte local'}</span>
       </div>
     </div>
   );
@@ -66,11 +65,16 @@ function App() {
     return (
       <div className="fade-in">
         <div className="metrics-grid">
-          <MetricCard title="Ventas Totales" value={data.metrics.sales} type="sales" />
-          <MetricCard title="Ganancia Neta" value={data.metrics.profit} type="profit" />
-          <MetricCard title="Margen Bruto" value={data.metrics.margin.toFixed(1)} suffix="%" type="margin" />
-          <MetricCard title="Items Críticos" value={data.metrics.critical} type="critical" />
+          <MetricCard title="Facturación bruta" value={data.metrics.grossSales} type="sales" />
+          <MetricCard title="Neto registrado" value={data.metrics.netReceived} type="sales" />
+          <MetricCard title="Ganancia registrada" value={data.metrics.registeredProfit} type="profit" />
+          <MetricCard title="Publicidad registrada" value={data.metrics.ads} type="sales" />
+          <MetricCard title="Margen sobre facturación" value={data.metrics.marginOnGross.toFixed(1)} suffix="%" type="margin" />
+          <MetricCard title="Ítems a revisar" value={data.metrics.critical} type="critical" />
         </div>
+        <p style={{color: 'var(--text-muted)', fontSize: '12px', margin: '-8px 0 24px'}}>
+          Métricas calculadas sólo con el archivo cargado y el período mostrado. La ganancia se toma tal como figura en el Master; no se descuenta publicidad por segunda vez.
+        </p>
 
         <div className="charts-container">
           <div className="glass-card" style={{height: '400px'}}>
@@ -108,7 +112,7 @@ function App() {
                 <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
                   <th style={{paddingBottom: '12px'}}>PRODUCTO</th>
                   <th style={{paddingBottom: '12px', textAlign: 'right'}}>CANT.</th>
-                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>GANANCIA</th>
+                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>FACTURACIÓN</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,7 +120,7 @@ function App() {
                   <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
                     <td style={{padding: '12px 0', fontSize: '14px'}}>{p.name}</td>
                     <td style={{textAlign: 'right'}}>{p.qty}</td>
-                    <td style={{textAlign: 'right', color: 'var(--accent-cyan)'}}>${Math.round(p.profit).toLocaleString()}</td>
+                    <td style={{textAlign: 'right', color: 'var(--accent-cyan)'}}>${Math.round(p.gross).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -182,11 +186,11 @@ function App() {
               <td style={{padding: '12px', textAlign: 'right'}}>{item.min}</td>
               <td style={{padding: '12px', textAlign: 'right'}}>
                 <span style={{
-                  color: item.status.includes('REPOSICIÓN') ? '#f97316' : '#10b981',
+                  color: item.status === 'REVISAR' ? '#f97316' : '#10b981',
                   fontSize: '11px',
                   fontWeight: 'bold',
                   padding: '4px 8px',
-                  background: item.status.includes('REPOSICIÓN') ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)',
+                  background: item.status === 'REVISAR' ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)',
                   borderRadius: '6px'
                 }}>
                   {item.status || 'OK'}
@@ -206,43 +210,24 @@ function App() {
         <thead>
           <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
             <th style={{padding: '12px'}}>FECHA</th>
-            <th style={{padding: '12px'}}>CLIENTE</th>
+            <th style={{padding: '12px'}}>CANAL</th>
             <th style={{padding: '12px'}}>PRODUCTO</th>
             <th style={{padding: '12px', textAlign: 'right'}}>CANT.</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>TOTAL NETO</th>
+            <th style={{padding: '12px', textAlign: 'right'}}>FACTURACIÓN</th>
           </tr>
         </thead>
         <tbody>
           {data.fullSales.map((sale, i) => (
             <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Fecha Compra']}</td>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Cliente']}</td>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Producto']}</td>
-              <td style={{padding: '12px', textAlign: 'right'}}>{sale['Cantidad']}</td>
-              <td style={{padding: '12px', textAlign: 'right', fontWeight: 'bold'}}>${sale['Total Neto'].toLocaleString()}</td>
+              <td style={{padding: '12px', fontSize: '13px'}}>{sale.displayDate}</td>
+              <td style={{padding: '12px', fontSize: '13px'}}>{sale.channel}</td>
+              <td style={{padding: '12px', fontSize: '13px'}}>{sale.product}</td>
+              <td style={{padding: '12px', textAlign: 'right'}}>{sale.qty}</td>
+              <td style={{padding: '12px', textAlign: 'right', fontWeight: 'bold'}}>${sale.gross.toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
-  );
-
-  const renderClients = () => (
-    <div className="fade-in metrics-grid" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'}}>
-      {data.clients.map((client, i) => (
-        <div key={i} className="glass-card" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
-          <div style={{width: '40px', height: '40px', background: 'var(--accent-purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
-            {client.name.charAt(0)}
-          </div>
-          <div>
-            <div style={{fontWeight: 'bold'}}>{client.name}</div>
-            <div style={{fontSize: '12px', color: 'var(--text-muted)'}}>{client.orders} pedidos realizados</div>
-            <div style={{fontSize: '14px', color: 'var(--accent-cyan)', fontWeight: 'bold', marginTop: '4px'}}>
-              Total: ${client.totalBought.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 
@@ -329,9 +314,6 @@ function App() {
           <div className={`nav-item ${activeView === 'logistica' ? 'active' : ''}`} onClick={() => setActiveView('logistica')}>
             <Truck size={20}/> Logística
           </div>
-          <div className={`nav-item ${activeView === 'clientes' ? 'active' : ''}`} onClick={() => setActiveView('clientes')}>
-            <Users size={20}/> Clientes
-          </div>
           <div style={{marginTop: 'auto'}} className={`nav-item ${activeView === 'config' ? 'active' : ''}`} onClick={() => setActiveView('config')}>
             <Settings size={20}/> Configuración
           </div>
@@ -346,10 +328,10 @@ function App() {
               {activeView === 'dashboard' ? 'Resumen de Negocio' : 
                activeView === 'inventario' ? 'Gestión de Stock' : 
                activeView === 'ventas' ? 'Historial de Ventas' : 
-               activeView === 'logistica' ? 'Control de Logística' : 'Clientes'}
+               activeView === 'logistica' ? 'Control de Logística' : 'Configuración'}
             </h1>
             <p style={{color: 'var(--text-muted)'}}>
-              {lastUpdated ? `Última actualización: ${lastUpdated}` : 'Dashboard interactivo basado en tu Master Excel'}
+              {lastUpdated ? `Corte local: ${data?.period || ''} · actualizado ${lastUpdated}` : 'Carga local: el archivo no se publica ni se envía a un servidor'}
             </p>
           </div>
           
@@ -368,7 +350,6 @@ function App() {
             {activeView === 'inventario' && renderInventory()}
             {activeView === 'ventas' && renderSales()}
             {activeView === 'logistica' && renderLogistics()}
-            {activeView === 'clientes' && renderClients()}
           </>
         ) : (
           <div className="glass-card" style={{textAlign: 'center', padding: '80px', borderStyle: 'dashed'}}>
