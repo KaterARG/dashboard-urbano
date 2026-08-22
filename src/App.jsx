@@ -1,382 +1,127 @@
-import React, { useState } from 'react';
-import { parseMasterExcel } from './utils/excelParser';
-import { 
-  LayoutDashboard, ShoppingBag, Package, Users, Settings, 
-  Upload, TrendingUp, DollarSign, Activity, AlertTriangle,
-  ArrowUpRight, ArrowDownRight, Search, Truck
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle, ArrowDownRight, ArrowUpRight, LayoutDashboard,
+  Package, ShoppingBag, Truck,
 } from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
+import {
+  CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 
 const COLORS = ['#a855f7', '#06b6d4', '#f97316', '#10b981'];
+const currency = (value) => `$${Math.round(value || 0).toLocaleString('es-AR')}`;
 
-const MetricCard = ({ title, value, type, suffix = '' }) => {
-  const isNegative = type === 'critical' && value > 10;
+function MetricCard({ title, value, suffix = '', warning = false }) {
   return (
     <div className="glass-card">
       <div className="card-title">{title}</div>
-      <div className="card-value">
-        {type !== 'margin' && type !== 'critical' && '$'}
-        {typeof value === 'number' ? value.toLocaleString() : value}
-        {suffix}
-      </div>
-      <div className={`card-trend ${isNegative ? 'trend-down' : 'trend-up'}`}>
-        {isNegative ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
-        <span>{isNegative ? 'Atención' : '+12.4%'}</span>
+      <div className="card-value">{value}{suffix}</div>
+      <div className={`card-trend ${warning ? 'trend-down' : 'trend-up'}`}>
+        {warning ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
+        <span>{warning ? 'Requiere seguimiento' : 'Datos agregados'}</span>
       </div>
     </div>
   );
-};
+}
 
 function App() {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState('');
   const [activeView, setActiveView] = useState('dashboard');
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setLoading(true);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const result = parseMasterExcel(evt.target.result);
-        setData(result);
-        setLastUpdated(new Date().toLocaleTimeString());
-      } catch (err) {
-        alert("Error al procesar el archivo: " + err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  };
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: 'no-store' })
+      .then((response) => {
+        if (!response.ok) throw new Error('No se encontró el resumen público.');
+        return response.json();
+      })
+      .then(setData)
+      .catch((loadError) => setError(loadError.message));
+  }, []);
 
-  const renderDashboard = () => {
-    // Format logistics for pie chart
-    const pieData = [
-      { name: 'Mercado Envíos', value: data.charts.logistics['Mercado Envíos'].count },
-      { name: 'Flex', value: data.charts.logistics['Flex'].count }
-    ];
+  const generatedLabel = useMemo(() => {
+    if (!data?.generatedAt) return '';
+    return new Date(data.generatedAt).toLocaleString('es-AR');
+  }, [data]);
 
-    return (
-      <div className="fade-in">
-        <div className="metrics-grid">
-          <MetricCard title="Ventas Totales" value={data.metrics.sales} type="sales" />
-          <MetricCard title="Ganancia Neta" value={data.metrics.profit} type="profit" />
-          <MetricCard title="Margen Bruto" value={data.metrics.margin.toFixed(1)} suffix="%" type="margin" />
-          <MetricCard title="Items Críticos" value={data.metrics.critical} type="critical" />
+  if (error) return <main className="main-content"><div className="glass-card"><h1>Resumen no disponible</h1><p>{error}</p></div></main>;
+  if (!data) return <main className="main-content"><div className="glass-card">Cargando resumen público…</div></main>;
+
+  const logistics = data.charts?.logistics || [];
+  const metrics = data.metrics || {};
+
+  const renderDashboard = () => (
+    <div className="fade-in">
+      <div className="metrics-grid">
+        <MetricCard title="Facturación bruta" value={currency(metrics.grossSales)} />
+        <MetricCard title="Ventas" value={metrics.orders || 0} />
+        <MetricCard title="Unidades" value={metrics.units || 0} />
+        <MetricCard title="Margen registrado" value={(metrics.marginOnGross || 0).toFixed(1)} suffix="%" />
+        <MetricCard title="Alertas de stock" value={metrics.critical || 0} warning={(metrics.critical || 0) > 0} />
+      </div>
+      <p className="privacy-note">{data.privacy}</p>
+      <div className="charts-container">
+        <div className="glass-card" style={{ height: '400px' }}>
+          <div className="card-title">Ventas por día</div>
+          <ResponsiveContainer width="100%" height="90%">
+            <LineChart data={data.charts?.salesByDay || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value / 1000}k`} />
+              <Tooltip formatter={(value) => currency(value)} contentStyle={{ background: '#16171d', border: '1px solid var(--card-border)', borderRadius: '12px' }} />
+              <Line type="monotone" dataKey="value" stroke="var(--accent-purple)" strokeWidth={4} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-
-        <div className="charts-container">
-          <div className="glass-card" style={{height: '400px'}}>
-            <div className="card-title">Ventas por Día</div>
-            <ResponsiveContainer width="100%" height="90%">
-              <LineChart data={data.charts.salesByDay}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
-                <Tooltip contentStyle={{background: '#16171d', border: '1px solid var(--card-border)', borderRadius: '12px'}} />
-                <Line type="monotone" dataKey="value" stroke="var(--accent-purple)" strokeWidth={4} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="glass-card" style={{height: '400px'}}>
-            <div className="card-title">Volumen Logística</div>
-            <ResponsiveContainer width="100%" height="90%">
-              <PieChart>
-                <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {pieData.map((e, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="table-section">
-          <div className="glass-card">
-            <div className="card-title">Top Productos</div>
-            <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '16px'}}>
-              <thead>
-                <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
-                  <th style={{paddingBottom: '12px'}}>PRODUCTO</th>
-                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>CANT.</th>
-                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>GANANCIA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.topProducts.slice(0, 5).map((p, i) => (
-                  <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
-                    <td style={{padding: '12px 0', fontSize: '14px'}}>{p.name}</td>
-                    <td style={{textAlign: 'right'}}>{p.qty}</td>
-                    <td style={{textAlign: 'right', color: 'var(--accent-cyan)'}}>${Math.round(p.profit).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="glass-card">
-            <div className="card-title">Reposición Necesaria</div>
-            <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '16px'}}>
-              <thead>
-                <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
-                  <th style={{paddingBottom: '12px'}}>SKU</th>
-                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>STOCK</th>
-                  <th style={{paddingBottom: '12px', textAlign: 'right'}}>ESTADO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.toRestock.slice(0, 5).map((p, i) => (
-                  <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
-                    <td style={{padding: '12px 0', fontSize: '14px'}}>{p.sku}</td>
-                    <td style={{textAlign: 'right'}}>{p.stock}</td>
-                    <td style={{textAlign: 'right'}}><span style={{color: '#f97316', fontSize: '12px'}}>{p.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="glass-card" style={{ height: '400px' }}>
+          <div className="card-title">Canales de envío</div>
+          <ResponsiveContainer width="100%" height="90%">
+            <PieChart>
+              <Pie data={logistics} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="count">
+                {logistics.map((entry, index) => <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip formatter={(value) => `${value} envíos`} />
+              <Legend verticalAlign="bottom" />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
-    );
-  };
-
-  const renderInventory = () => (
-    <div className="fade-in glass-card">
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
-        <h2 className="card-title">Inventario Completo</h2>
-        <div style={{display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '8px'}}>
-          <Search size={18} style={{marginRight: '8px', color: 'var(--text-muted)'}} />
-          <input 
-            type="text" 
-            placeholder="Buscar producto..." 
-            style={{background: 'none', border: 'none', color: 'white', outline: 'none'}}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      <div className="table-section">
+        <section className="glass-card">
+          <div className="card-title">Productos con mayor movimiento</div>
+          <table className="data-table"><thead><tr><th>PRODUCTO</th><th>UNIDADES</th><th>FACTURACIÓN</th></tr></thead>
+            <tbody>{(data.topProducts || []).slice(0, 5).map((item) => <tr key={item.name}><td>{item.name}</td><td>{item.qty}</td><td className="cyan">{currency(item.gross)}</td></tr>)}</tbody>
+          </table>
+        </section>
+        <section className="glass-card">
+          <div className="card-title">Alertas operativas</div>
+          <table className="data-table"><thead><tr><th>SKU</th><th>PRODUCTO</th><th>ESTADO</th></tr></thead>
+            <tbody>{(data.toRestock || []).slice(0, 5).map((item) => <tr key={item.sku}><td>{item.sku}</td><td>{item.name}</td><td><span className="status-warning">{item.status}</span></td></tr>)}</tbody>
+          </table>
+        </section>
       </div>
-      <table style={{width: '100%', borderCollapse: 'collapse'}}>
-        <thead>
-          <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
-            <th style={{padding: '12px'}}>SKU</th>
-            <th style={{padding: '12px'}}>PRODUCTO</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>STOCK ACTUAL</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>STOCK MÍN.</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>ESTADO</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.fullInventory.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).map((item, i) => (
-            <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
-              <td style={{padding: '12px', fontSize: '13px'}}>{item.sku}</td>
-              <td style={{padding: '12px', fontSize: '13px'}}>{item.name}</td>
-              <td style={{padding: '12px', textAlign: 'right'}}>{item.stock}</td>
-              <td style={{padding: '12px', textAlign: 'right'}}>{item.min}</td>
-              <td style={{padding: '12px', textAlign: 'right'}}>
-                <span style={{
-                  color: item.status.includes('REPOSICIÓN') ? '#f97316' : '#10b981',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  padding: '4px 8px',
-                  background: item.status.includes('REPOSICIÓN') ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)',
-                  borderRadius: '6px'
-                }}>
-                  {item.status || 'OK'}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 
-  const renderSales = () => (
-    <div className="fade-in glass-card">
-      <h2 className="card-title">Historial Reciente de Ventas</h2>
-      <table style={{width: '100%', borderCollapse: 'collapse'}}>
-        <thead>
-          <tr style={{textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px'}}>
-            <th style={{padding: '12px'}}>FECHA</th>
-            <th style={{padding: '12px'}}>CLIENTE</th>
-            <th style={{padding: '12px'}}>PRODUCTO</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>CANT.</th>
-            <th style={{padding: '12px', textAlign: 'right'}}>TOTAL NETO</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.fullSales.map((sale, i) => (
-            <tr key={i} style={{borderTop: '1px solid var(--card-border)'}}>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Fecha Compra']}</td>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Cliente']}</td>
-              <td style={{padding: '12px', fontSize: '13px'}}>{sale['Producto']}</td>
-              <td style={{padding: '12px', textAlign: 'right'}}>{sale['Cantidad']}</td>
-              <td style={{padding: '12px', textAlign: 'right', fontWeight: 'bold'}}>${sale['Total Neto'].toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  const renderClients = () => (
-    <div className="fade-in metrics-grid" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'}}>
-      {data.clients.map((client, i) => (
-        <div key={i} className="glass-card" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
-          <div style={{width: '40px', height: '40px', background: 'var(--accent-purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
-            {client.name.charAt(0)}
-          </div>
-          <div>
-            <div style={{fontWeight: 'bold'}}>{client.name}</div>
-            <div style={{fontSize: '12px', color: 'var(--text-muted)'}}>{client.orders} pedidos realizados</div>
-            <div style={{fontSize: '14px', color: 'var(--accent-cyan)', fontWeight: 'bold', marginTop: '4px'}}>
-              Total: ${client.totalBought.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderLogistics = () => {
-    const log = data.charts.logistics;
-    return (
-      <div className="fade-in space-y-8">
-        <div className="metrics-grid">
-          <MetricCard title="Gasto Mercado Envíos" value={log['Mercado Envíos'].total} type="sales" />
-          <MetricCard title="Gasto Flex Total" value={log['Flex'].total} type="sales" />
-          <MetricCard title="Gasto Flex Marina" value={log['Flex'].sub['Marina'].total} type="sales" />
-          <MetricCard title="Gasto Flex LBS" value={log['Flex'].sub['LBS'].total} type="sales" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-card">
-            <div className="card-title">Distribución de Gastos</div>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie 
-                  data={[
-                    { name: 'Mercado Envíos', value: log['Mercado Envíos'].total },
-                    { name: 'Flex Marina', value: log['Flex'].sub['Marina'].total },
-                    { name: 'Flex LBS', value: log['Flex'].sub['LBS'].total }
-                  ]} 
-                  innerRadius={60} 
-                  outerRadius={80} 
-                  paddingAngle={5} 
-                  dataKey="value"
-                >
-                  {COLORS.map((c, i) => <Cell key={i} fill={c} />)}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="glass-card">
-            <div className="card-title">Detalle de Envíos</div>
-            <div style={{marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <span>Mercado Envíos ({log['Mercado Envíos'].count} envíos)</span>
-                <span className="text-gradient font-bold">${log['Mercado Envíos'].total.toLocaleString()}</span>
-              </div>
-              <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <span>Flex Marina ({log['Flex'].sub['Marina'].count} envíos)</span>
-                <span className="text-gradient font-bold">${log['Flex'].sub['Marina'].total.toLocaleString()}</span>
-              </div>
-              <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <span>Flex LBS ({log['Flex'].sub['LBS'].count} envíos)</span>
-                <span className="text-gradient font-bold">${log['Flex'].sub['LBS'].total.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderAlerts = () => <section className="fade-in glass-card"><h2 className="card-title">Alertas de reposición</h2><p className="privacy-note">Se informa el estado, no cantidades de inventario.</p><table className="data-table"><thead><tr><th>SKU</th><th>PRODUCTO</th><th>ESTADO</th></tr></thead><tbody>{(data.toRestock || []).map((item) => <tr key={item.sku}><td>{item.sku}</td><td>{item.name}</td><td><span className="status-warning">{item.status}</span></td></tr>)}</tbody></table></section>;
+  const renderLogistics = () => <section className="fade-in glass-card"><h2 className="card-title">Logística del período</h2><p className="privacy-note">Cantidad agregada de envíos, sin destinos ni costos operativos.</p><table className="data-table"><thead><tr><th>MODALIDAD</th><th>ENVÍOS</th></tr></thead><tbody>{logistics.map((item) => <tr key={item.name}><td>{item.name}</td><td>{item.count}</td></tr>)}</tbody></table></section>;
+  const titles = { dashboard: 'Resumen de negocio', alerts: 'Alertas de stock', logistics: 'Logística' };
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
       <aside className="sidebar">
-        <div className="logo-section">
-          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%'}}>
-            <div className="logo-icon" style={{width: '60px', height: '60px', marginBottom: '12px'}}>
-              <ShoppingBag size={30} style={{margin: '15px'}} />
-            </div>
-            <span style={{fontWeight: 800, fontSize: '18px', textAlign: 'center'}}>URBANO STORE</span>
-          </div>
-        </div>
-        
-        <div className="nav-links">
-          <div className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveView('dashboard')}>
-            <LayoutDashboard size={20}/> Dashboard
-          </div>
-          <div className={`nav-item ${activeView === 'inventario' ? 'active' : ''}`} onClick={() => setActiveView('inventario')}>
-            <Package size={20}/> Inventario
-          </div>
-          <div className={`nav-item ${activeView === 'ventas' ? 'active' : ''}`} onClick={() => setActiveView('ventas')}>
-            <ShoppingBag size={20}/> Ventas
-          </div>
-          <div className={`nav-item ${activeView === 'logistica' ? 'active' : ''}`} onClick={() => setActiveView('logistica')}>
-            <Truck size={20}/> Logística
-          </div>
-          <div className={`nav-item ${activeView === 'clientes' ? 'active' : ''}`} onClick={() => setActiveView('clientes')}>
-            <Users size={20}/> Clientes
-          </div>
-          <div style={{marginTop: 'auto'}} className={`nav-item ${activeView === 'config' ? 'active' : ''}`} onClick={() => setActiveView('config')}>
-            <Settings size={20}/> Configuración
-          </div>
-        </div>
+        <div className="logo-section"><div className="brand"><div className="logo-icon"><ShoppingBag size={30} /></div><span>URBANO STORE</span></div></div>
+        <nav className="nav-links">
+          <button className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveView('dashboard')}><LayoutDashboard size={20} /> Dashboard</button>
+          <button className={`nav-item ${activeView === 'alerts' ? 'active' : ''}`} onClick={() => setActiveView('alerts')}><Package size={20} /> Alertas de stock</button>
+          <button className={`nav-item ${activeView === 'logistics' ? 'active' : ''}`} onClick={() => setActiveView('logistics')}><Truck size={20} /> Logística</button>
+        </nav>
       </aside>
-
-      {/* Main */}
       <main className="main-content">
-        <header className="header">
-          <div>
-            <h1 style={{fontSize: '28px', marginBottom: '4px'}}>
-              {activeView === 'dashboard' ? 'Resumen de Negocio' : 
-               activeView === 'inventario' ? 'Gestión de Stock' : 
-               activeView === 'ventas' ? 'Historial de Ventas' : 
-               activeView === 'logistica' ? 'Control de Logística' : 'Clientes'}
-            </h1>
-            <p style={{color: 'var(--text-muted)'}}>
-              {lastUpdated ? `Última actualización: ${lastUpdated}` : 'Dashboard interactivo basado en tu Master Excel'}
-            </p>
-          </div>
-          
-          <label className="upload-btn">
-            <input type="file" style={{display: 'none'}} onChange={handleFileUpload} />
-            <Upload size={20} />
-            <span>Actualizar Master</span>
-          </label>
-        </header>
-
-        {loading ? (
-          <div style={{display: 'flex', justifyContent: 'center', marginTop: '100px'}}>Cargando datos...</div>
-        ) : data ? (
-          <>
-            {activeView === 'dashboard' && renderDashboard()}
-            {activeView === 'inventario' && renderInventory()}
-            {activeView === 'ventas' && renderSales()}
-            {activeView === 'logistica' && renderLogistics()}
-            {activeView === 'clientes' && renderClients()}
-          </>
-        ) : (
-          <div className="glass-card" style={{textAlign: 'center', padding: '80px', borderStyle: 'dashed'}}>
-            <Upload size={48} style={{color: 'var(--accent-purple)', marginBottom: '24px'}} />
-            <h2 style={{fontSize: '24px', marginBottom: '12px'}}>Tu negocio en alta resolución</h2>
-            <p style={{color: 'var(--text-muted)'}}>Sube tu Master Excel para ver la magia.</p>
-          </div>
-        )}
+        <header className="header"><div><h1>{titles[activeView]}</h1><p>Período: {data.period} · actualizado {generatedLabel}</p></div><div className="public-badge"><AlertTriangle size={18} /> Resumen público</div></header>
+        {activeView === 'dashboard' && renderDashboard()}
+        {activeView === 'alerts' && renderAlerts()}
+        {activeView === 'logistics' && renderLogistics()}
       </main>
     </div>
   );

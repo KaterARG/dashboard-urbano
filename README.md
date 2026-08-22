@@ -1,16 +1,47 @@
-# React + Vite
+# Dashboard Urbano Store
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dashboard público con indicadores agregados del negocio.
 
-Currently, two official plugins are available:
+## Privacidad y seguridad
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- El dashboard no contiene API keys, IDs de Google Sheets ni credenciales.
+- El sitio sólo descarga `public/dashboard-data.json`, un resumen anónimo versionado en el repositorio.
+- El resumen excluye clientes, IDs de órdenes, destinos, caja, compras, recetas, costos y cantidades de stock.
+- Nunca publicar una hoja `VENTAS`, `CAJA`, `STOCK` o `RECETAS` en Google Sheets ni dentro del repositorio.
 
-## React Compiler
+## Métricas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+El dashboard muestra el mes calendario del último movimiento incluido en el resumen:
 
-## Expanding the ESLint configuration
+- **Facturación bruta:** `SubTotal` (o `Facturación` si no existe esa columna).
+- **Neto registrado:** `Total Neto` agregado.
+- **Ganancia registrada:** columna `Ganancia` agregada, sin volver a descontar publicidad.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Estas métricas son de control operativo. Para decisiones comerciales, conciliá antes las ventas con Mercado Libre y verificá que las fórmulas del Master estén actualizadas.
+
+## Actualizar el resumen público
+
+Desde la copia local de este repositorio, luego de conciliar el Master:
+
+```bash
+python tools/generate_public_dashboard.py /ruta/privada/al/master_snapshot.json \
+  --output public/dashboard-data.json
+git add public/dashboard-data.json
+git commit -m "Actualizar resumen público"
+git push
+```
+
+El script está diseñado para que el archivo generado sea el único dato de negocio que se publica. Revisá el diff antes de hacer `push`.
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+## Despliegue
+
+Al fusionar cambios en `main`, GitHub Actions compila el proyecto y actualiza la rama `gh-pages`. El sitio publicado contiene código estático y el resumen anónimo, nunca una copia del Master.
