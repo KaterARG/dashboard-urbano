@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-22T19:41:17-03:00",
+  "period": "Agosto 2026",
+  "privacy": "Datos agregados y anónimos. No incluye clientes, órdenes, caja, compras, recetas, costos ni cantidades de stock.",
+  "metrics": {
+    "grossSales": 1551765.0,
+    "netReceived": 1000456.25,
+    "registeredProfit": 406596.97,
+    "orders": 30,
+    "units": 41.0,
+    "marginOnGross": 26.2,
+    "critical": 16
+  },
+  "charts": {
+    "salesByDay": [
+      {
+        "name": "11/08",
+        "value": 64850.0
+      },
+      {
+        "name": "12/08",
+        "value": 101800.0
+      },
+      {
+        "name": "13/08",
+        "value": 101800.0
+      },
+      {
+        "name": "14/08",
+        "value": 238600.0
+      },
+      {
+        "name": "15/08",
+        "value": 217600.0
+      },
+      {
+        "name": "16/08",
+        "value": 203600.0
+      },
+      {
+        "name": "17/08",
+        "value": 69800.0
+      },
+      {
+        "name": "18/08",
+        "value": 136960.0
+      },
+      {
+        "name": "19/08",
+        "value": 340400.0
+      },
+      {
+        "name": "20/08",
+        "value": 76355.0
+      }
+    ],
+    "logistics": [
+      {
+        "name": "Flex",
+        "count": 24
+      },
+      {
+        "name": "Mercado Envios",
+        "count": 6
+      }
+    ]
+  },
+  "topProducts": [
+    {
+      "name": "Kit Mudanza Intermedio",
+      "gross": 1018000.0,
+      "qty": 20.0,
+      "orders": 18
+    },
+    {
+      "name": "Kit Mudanza Completo",
+      "gross": 257700.0,
+      "qty": 3.0,
+      "orders": 3
+    },
+    {
+      "name": "Kit Mudanza Basico",
+      "gross": 119600.0,
+      "qty": 4.0,
+      "orders": 2
+    },
+    {
+      "name": "Agitadores Madera Bebidas Calientes Frias 15 Cm X 1000iberia",
+      "gross": 59075.0,
+      "qty": 5.0,
+      "orders": 2
+    },
+    {
+      "name": "Bolsa E-Commerce 20x30 Negra - 100u",
+      "gross": 49950.0,
+      "qty": 5.0,
+      "orders": 1
+    },
+    {
+      "name": "Kit Envios 100 Bolsas E-commerce + Cintas Negro",
+      "gross": 18900.0,
+      "qty": 1.0,
+      "orders": 1
+    },
+    {
+      "name": "Cinta De Embalar Marrón 48x50  - Pack x12",
+      "gross": 14900.0,
+      "qty": 1.0,
+      "orders": 1
+    },
+    {
+      "name": "Cinta De Embalar Transparente 48x50  - Pack x6",
+      "gross": 8350.0,
+      "qty": 1.0,
+      "orders": 1
+    }
+  ],
+  "toRestock": [
+    {
+      "sku": "BAN-FOD-TRU",
+      "name": "Bandeja Food Truck 14x10cm (50u)",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "BOL-COR-60X90",
+      "name": "Bolsa de consorcio 60x90 (10 unidades)",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "CAJA-50x40x30",
+      "name": "Caja de carton 50x40x30",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "CINTA-FRAGIL-X1",
+      "name": "Cinta De Embalar Frágil 48x50 - Unidad",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "CINTA-MARRON-X1",
+      "name": "Cinta De Embalar Marrón 48x50  - Unidad",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "CINTA-TRANS-X1",
+      "name": "Cinta De Embalar Transparente 48x50  - Unidad",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "FIL-STR-10CM",
+      "name": "Films Stretch Negro 10 cm",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "KIT-ECOM-CRE",
+      "name": "Kit E-Commerce Crecimiento",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "KIT-ECOM-EMP",
+      "name": "Kit E-Commerce Emprendedor",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "KIT-ECOM-EMPN",
+      "name": "Kit E-Commerce Emprendedor Bolsas Negras",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "KIT-ENV-ECOM-NEG",
+      "name": "Kit Envios 100 Bolsas E-commerce + Cintas Negro",
+      "status": "REPOSICIÓN NECESARIA"
+    },
+    {
+      "sku": "KIT-MUD-BAS",
+      "name": "Kit Mudanza Basico",
+      "status": "REPOSICIÓN NECESARIA"
+    }
+  ]
+}
