@@ -1,16 +1,34 @@
-# React + Vite
+# Dashboard Urbano Store
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dashboard local para leer una copia del Master de Urbano Store.
 
-Currently, two official plugins are available:
+## Privacidad y seguridad
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- El dashboard no contiene API keys, IDs de Google Sheets ni credenciales.
+- El Master se carga manualmente desde el navegador y no se envía a ningún servidor.
+- No se muestran clientes ni otros datos personales en la interfaz.
+- Nunca publicar una hoja `VENTAS`, `CAJA`, `STOCK` o `RECETAS` en Google Sheets para alimentar este sitio.
 
-## React Compiler
+## Métricas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+El dashboard muestra el mes calendario actual del archivo cargado:
 
-## Expanding the ESLint configuration
+- **Facturación bruta:** `SubTotal` (o `Facturación` si no existe esa columna).
+- **Neto registrado:** `Total Neto`.
+- **Ganancia registrada:** columna `Ganancia`, sin volver a descontar publicidad.
+- **Publicidad registrada:** columna `Publicidad`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Estas métricas son de control operativo. Para decisiones comerciales, conciliá antes las ventas con Mercado Libre y verificá que las fórmulas del Master estén actualizadas.
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+## Despliegue
+
+Al fusionar cambios en `main`, GitHub Actions compila el proyecto y actualiza la rama `gh-pages`. El sitio publicado sólo contiene el código estático de este lector local; nunca lleva una copia del Master.
